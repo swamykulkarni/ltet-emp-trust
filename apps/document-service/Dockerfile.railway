@@ -1,0 +1,53 @@
+# Railway-optimized Dockerfile for Document Service
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY apps/document-service/package*.json ./apps/document-service/
+COPY libs/shared/*/package*.json ./libs/shared/*/
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build the service
+ENV NODE_ENV=production
+RUN npm run build:document-service
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nodejs
+
+# Copy built application
+COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/document-service ./
+COPY --from=builder --chown=nodejs:nodejs /app/apps/document-service/src/database ./database
+
+# Copy node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Create storage directory
+RUN mkdir -p /app/storage && chown nodejs:nodejs /app/storage
+
+USER nodejs
+
+EXPOSE 3005
+
+ENV PORT=3005
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "main.js"]

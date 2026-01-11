@@ -1,0 +1,64 @@
+{
+  "root": true,
+  "ignorePatterns": ["node_modules", "dist"],
+  "plugins": ["@nx"],
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "parser": "@typescript-eslint/parser",
+      "extends": ["eslint:recommended"],
+      "env": {
+        "node": true,
+        "es6": true
+      },
+      "rules": {
+        "no-unused-vars": "off",
+        "@nx/enforce-module-boundaries": [
+          "error",
+          {
+            "enforceBuildableLibDependency": true,
+            "allow": [],
+            "depConstraints": [
+              {
+                "sourceTag": "*",
+                "onlyDependOnLibsWithTags": ["*"]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["*.js", "*.jsx"],
+      "extends": ["eslint:recommended"],
+      "env": {
+        "node": true,
+        "es6": true
+      },
+      "rules": {
+        "no-unused-vars": "off",
+        "@nx/enforce-module-boundaries": [
+          "error",
+          {
+            "enforceBuildableLibDependency": true,
+            "allow": [],
+            "depConstraints": [
+              {
+                "sourceTag": "*",
+                "onlyDependOnLibsWithTags": ["*"]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["*.spec.ts", "*.spec.tsx", "*.spec.js", "*.spec.jsx"],
+      "env": {
+        "jest": true,
+        "node": true
+      },
+      "rules": {}
+    }
+  ]
+}

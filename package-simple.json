@@ -1,0 +1,14 @@
+{
+  "name": "ltet-portal",
+  "version": "1.0.0",
+  "main": "railway-simple.js",
+  "scripts": {
+    "start": "node railway-simple.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

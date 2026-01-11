@@ -1,0 +1,238 @@
+{
+    "widgets": [
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ECS", "CPUUtilization", "ServiceName", "user-service", "ClusterName", "ltet-prod-cluster" ],
+                    [ ".", ".", "ServiceName", "scheme-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "application-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "document-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "notification-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "web-app", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "ECS Service CPU Utilization",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 0,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ECS", "MemoryUtilization", "ServiceName", "user-service", "ClusterName", "ltet-prod-cluster" ],
+                    [ ".", ".", "ServiceName", "scheme-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "application-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "document-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "notification-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "web-app", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "ECS Service Memory Utilization",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 6,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/ltet-prod-alb" ],
+                    [ ".", "HTTPCode_Target_2XX_Count", ".", "." ],
+                    [ ".", "HTTPCode_Target_4XX_Count", ".", "." ],
+                    [ ".", "HTTPCode_Target_5XX_Count", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Application Load Balancer Metrics",
+                "period": 300,
+                "stat": "Sum"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 8,
+            "y": 6,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "app/ltet-prod-alb" ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Response Time",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 16,
+            "y": 6,
+            "width": 8,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApplicationELB", "HealthyHostCount", "TargetGroup", "targetgroup/ltet-prod-web-app", "LoadBalancer", "app/ltet-prod-alb" ],
+                    [ ".", "UnHealthyHostCount", ".", ".", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Target Health",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 12,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "ltet-prod-postgres" ],
+                    [ ".", "DatabaseConnections", ".", "." ],
+                    [ ".", "FreeableMemory", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "RDS Database Metrics",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 12,
+            "width": 12,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ElastiCache", "CPUUtilization", "CacheClusterId", "ltet-prod-redis-001" ],
+                    [ ".", "CurrConnections", ".", "." ],
+                    [ ".", "NetworkBytesIn", ".", "." ],
+                    [ ".", "NetworkBytesOut", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "ElastiCache Redis Metrics",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "log",
+            "x": 0,
+            "y": 18,
+            "width": 24,
+            "height": 6,
+            "properties": {
+                "query": "SOURCE '/ecs/ltet-prod'\n| fields @timestamp, @message\n| filter @message like /ERROR/\n| sort @timestamp desc\n| limit 100",
+                "region": "us-east-1",
+                "title": "Recent Error Logs",
+                "view": "table"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 0,
+            "y": 24,
+            "width": 6,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ECS", "RunningTaskCount", "ServiceName", "user-service", "ClusterName", "ltet-prod-cluster" ],
+                    [ ".", ".", "ServiceName", "scheme-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "application-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "document-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "notification-service", ".", "." ],
+                    [ ".", ".", "ServiceName", "web-app", ".", "." ]
+                ],
+                "view": "singleValue",
+                "region": "us-east-1",
+                "title": "Running Tasks",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 6,
+            "y": 24,
+            "width": 6,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/S3", "BucketSizeBytes", "BucketName", "ltet-prod-documents", "StorageType", "StandardStorage" ],
+                    [ ".", "NumberOfObjects", ".", ".", ".", "AllStorageTypes" ]
+                ],
+                "view": "singleValue",
+                "region": "us-east-1",
+                "title": "S3 Storage Metrics",
+                "period": 86400,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 12,
+            "y": 24,
+            "width": 6,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/RDS", "ReadLatency", "DBInstanceIdentifier", "ltet-prod-postgres" ],
+                    [ ".", "WriteLatency", ".", "." ]
+                ],
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "us-east-1",
+                "title": "Database Latency",
+                "period": 300,
+                "stat": "Average"
+            }
+        },
+        {
+            "type": "metric",
+            "x": 18,
+            "y": 24,
+            "width": 6,
+            "height": 6,
+            "properties": {
+                "metrics": [
+                    [ "AWS/ElastiCache", "CacheHitRate", "CacheClusterId", "ltet-prod-redis-001" ]
+                ],
+                "view": "singleValue",
+                "region": "us-east-1",
+                "title": "Cache Hit Rate",
+                "period": 300,
+                "stat": "Average"
+            }
+        }
+    ]
+}

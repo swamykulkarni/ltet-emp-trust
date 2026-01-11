@@ -1,0 +1,102 @@
+# Multi-stage Dockerfile for LTET Employee Trust Portal Production Deployment
+
+# Stage 1: Build dependencies and shared libraries
+FROM node:18-alpine AS dependencies
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY libs/shared/*/package*.json ./libs/shared/*/
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Stage 2: Build applications
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# Copy source code
+COPY . .
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Build shared libraries first
+RUN npm run build:shared
+
+# Build all applications
+RUN npm run build
+
+# Stage 3: Production runtime for services
+FROM node:18-alpine AS service-runtime
+
+# Install security updates and required packages
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init curl && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy built applications and dependencies
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
+
+# Set security headers and configurations
+ENV NODE_ENV=production
+ENV NODE_OPTIONS="--max-old-space-size=1024"
+
+# Switch to non-root user
+USER nodejs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Default command (will be overridden by service-specific commands)
+CMD ["node", "dist/main.js"]
+
+# Stage 4: Production runtime for web application
+FROM node:18-alpine AS web-runtime
+
+# Install security updates
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init curl && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy Next.js build output
+COPY --from=builder --chown=nodejs:nodejs /app/apps/web-app/.next/standalone ./
+COPY --from=builder --chown=nodejs:nodejs /app/apps/web-app/.next/static ./apps/web-app/.next/static
+COPY --from=builder --chown=nodejs:nodejs /app/apps/web-app/public ./apps/web-app/public
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+# Switch to non-root user
+USER nodejs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Expose port
+EXPOSE 3000
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["node", "apps/web-app/server.js"]

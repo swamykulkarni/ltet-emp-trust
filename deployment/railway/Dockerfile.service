@@ -1,0 +1,56 @@
+# Railway-optimized Dockerfile for Backend Services
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY libs/shared/*/package*.json ./libs/shared/*/
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build argument for service name
+ARG SERVICE_NAME
+ENV SERVICE_NAME=${SERVICE_NAME}
+
+# Build the specific service
+RUN npm run build:${SERVICE_NAME}
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nodejs
+
+# Copy built application
+ARG SERVICE_NAME
+COPY --from=builder /app/dist/apps/${SERVICE_NAME} ./
+COPY --from=builder /app/apps/${SERVICE_NAME}/package.json ./package.json
+
+# Copy node_modules
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy database migrations if they exist
+COPY --from=builder /app/apps/${SERVICE_NAME}/src/database ./database 2>/dev/null || true
+
+USER nodejs
+
+EXPOSE 3000
+
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+CMD ["node", "main.js"]

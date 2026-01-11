@@ -1,0 +1,39 @@
+{
+  "timestamp": "2026-01-09T06:03:43.499Z",
+  "services": {
+    "user-service": {
+      "name": "user-service",
+      "port": 3001,
+      "healthy": false,
+      "endpoints": [],
+      "error": "Error"
+    },
+    "scheme-service": {
+      "name": "scheme-service",
+      "port": 3002,
+      "healthy": false,
+      "endpoints": [],
+      "error": "Error"
+    },
+    "application-service": {
+      "name": "application-service",
+      "port": 3003,
+      "healthy": false,
+      "endpoints": [],
+      "error": "Error"
+    },
+    "document-service": {
+      "name": "document-service",
+      "port": 3004,
+      "healthy": false,
+      "endpoints": [],
+      "error": "Error"
+    }
+  },
+  "summary": {
+    "totalServices": 4,
+    "healthyServices": 0,
+    "totalEndpoints": 0,
+    "workingEndpoints": 0
+  }
+}

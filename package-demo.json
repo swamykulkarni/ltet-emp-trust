@@ -1,0 +1,14 @@
+{
+  "name": "ltet-demo",
+  "version": "1.0.0",
+  "main": "railway-demo.js",
+  "scripts": {
+    "start": "node railway-demo.js"
+  },
+  "dependencies": {
+    "express": "^4.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

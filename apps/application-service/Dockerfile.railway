@@ -1,0 +1,50 @@
+# Railway-optimized Dockerfile for Application Service
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY apps/application-service/package*.json ./apps/application-service/
+COPY libs/shared/*/package*.json ./libs/shared/*/
+
+# Install dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build the service
+ENV NODE_ENV=production
+RUN npm run build:application-service
+
+# Production image
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nodejs
+
+# Copy built application
+COPY --from=builder --chown=nodejs:nodejs /app/dist/apps/application-service ./
+COPY --from=builder --chown=nodejs:nodejs /app/apps/application-service/src/database ./database
+
+# Copy node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+USER nodejs
+
+EXPOSE 3003
+
+ENV PORT=3003
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "main.js"]
