@@ -693,63 +693,674 @@ if (fs.existsSync(nextBuildPath) || fs.existsSync(nextStaticPath)) {
   app.use('/static', express.static(path.join(__dirname, 'apps/web-app/out')));
 }
 
-// Serve the main application - Use the working railway-production.js content
+// Serve the main application
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'), (err) => {
-    if (err) {
-      // Fallback to simple HTML if file doesn't exist
-      res.send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>LTET Employee Trust Portal</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
-                .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-                .header { text-align: center; margin-bottom: 30px; }
-                .status { background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                .credentials { background: #f0f8ff; padding: 15px; border-radius: 5px; margin: 20px 0; }
-                .btn { display: inline-block; background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
-                .btn:hover { background: #0056b3; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>🏢 LTET Employee Trust Portal</h1>
-                    <p>L&T Employee Trust Digital Platform</p>
-                </div>
+  // Serve the comprehensive React application
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>LTET Employee Trust Portal</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <style>
+            .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            .card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+            .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        </style>
+    </head>
+    <body class="bg-gray-50">
+        <div id="root"></div>
+        
+        <script type="text/babel">
+            const { useState, useEffect } = React;
+            
+            function App() {
+                const [currentView, setCurrentView] = useState('login');
+                const [user, setUser] = useState(null);
+                const [schemes, setSchemes] = useState([]);
+                const [applications, setApplications] = useState([]);
+                const [notifications, setNotifications] = useState([]);
+                const [loading, setLoading] = useState(false);
                 
-                <div class="status">
-                    <h3>✅ System Status: ONLINE</h3>
-                    <p>All services are running and ready for use.</p>
-                </div>
+                useEffect(() => {
+                    if (user) {
+                        fetchData();
+                    }
+                }, [user]);
                 
-                <div class="credentials">
-                    <h3>🔑 Demo Credentials</h3>
-                    <p><strong>Employee:</strong> AB123456 / demo123</p>
-                    <p><strong>Admin:</strong> CD789012 / admin123</p>
-                    <p><strong>Approver:</strong> EF345678 / approver123</p>
-                </div>
+                const fetchData = async () => {
+                    try {
+                        const headers = {
+                            'x-user-role': user.role,
+                            'x-user-id': user.userId
+                        };
+                        
+                        const [schemesRes, appsRes, notifsRes] = await Promise.all([
+                            fetch('/api/schemes', { headers }),
+                            fetch('/api/applications', { headers }),
+                            fetch('/api/notifications', { headers })
+                        ]);
+                        
+                        const schemesData = await schemesRes.json();
+                        const appsData = await appsRes.json();
+                        const notifsData = await notifsRes.json();
+                        
+                        setSchemes(schemesData.schemes || []);
+                        setApplications(appsData.applications || []);
+                        setNotifications(notifsData.notifications || []);
+                    } catch (error) {
+                        console.error('Error fetching data:', error);
+                    }
+                };
                 
-                <div style="text-align: center;">
-                    <a href="/health" class="btn">Health Check</a>
-                    <a href="/api/schemes" class="btn">View Schemes API</a>
-                    <a href="/api/applications" class="btn">Applications API</a>
-                </div>
+                const handleLogin = async (credentials) => {
+                    setLoading(true);
+                    try {
+                        const response = await fetch('/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(credentials)
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            setUser(data.user);
+                            setCurrentView('dashboard');
+                        } else {
+                            alert(data.message);
+                        }
+                    } catch (error) {
+                        alert('Login failed. Please try again.');
+                    }
+                    setLoading(false);
+                };
                 
-                <div style="margin-top: 30px; text-align: center; color: #666;">
-                    <p>🚀 Enhanced LTET Portal with Complete Workflows</p>
-                    <p>Multi-step forms • Document upload • Role-based dashboards • Real-time tracking</p>
-                </div>
-            </div>
-        </body>
-        </html>
-      `);
-    }
-  });
+                const handleLogout = () => {
+                    setUser(null);
+                    setCurrentView('login');
+                    setSchemes([]);
+                    setApplications([]);
+                    setNotifications([]);
+                };
+                
+                if (currentView === 'login') {
+                    return <LoginPage onLogin={handleLogin} loading={loading} />;
+                }
+                
+                return (
+                    <div className="min-h-screen bg-gray-50">
+                        <Navigation user={user} onLogout={handleLogout} currentView={currentView} setCurrentView={setCurrentView} notifications={notifications} />
+                        <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                            {currentView === 'dashboard' && <Dashboard user={user} schemes={schemes} applications={applications} />}
+                            {currentView === 'schemes' && <SchemesPage schemes={schemes} user={user} />}
+                            {currentView === 'applications' && <ApplicationsPage applications={applications} user={user} />}
+                            {currentView === 'profile' && user?.role === 'employee' && <ProfilePage user={user} />}
+                            {currentView === 'users' && user?.role === 'admin' && <UserManagementPage />}
+                            {currentView === 'analytics' && user?.role === 'admin' && <AdminDashboard />}
+                            {currentView === 'reports' && (user?.role === 'admin' || user?.role === 'approver') && <ReportsPage user={user} />}
+                        </main>
+                    </div>
+                );
+            }
+            
+            function LoginPage({ onLogin, loading }) {
+                const [credentials, setCredentials] = useState({ employeeId: '', password: '' });
+                
+                const handleSubmit = (e) => {
+                    e.preventDefault();
+                    onLogin(credentials);
+                };
+                
+                return (
+                    <div className="min-h-screen flex items-center justify-center gradient-bg">
+                        <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+                            <div className="text-center mb-8">
+                                <div className="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                                    <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H3m2 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                </div>
+                                <h1 className="text-3xl font-bold text-gray-900">LTET Portal</h1>
+                                <p className="text-gray-600 mt-2">L&T Employee Trust Digital Platform</p>
+                            </div>
+                            
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Employee ID</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g., AB123456"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={credentials.employeeId}
+                                        onChange={(e) => setCredentials({...credentials, employeeId: e.target.value.toUpperCase()})}
+                                        required
+                                    />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                                    <input
+                                        type="password"
+                                        placeholder="Enter your password"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={credentials.password}
+                                        onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                                        required
+                                    />
+                                </div>
+                                
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                >
+                                    {loading ? 'Signing in...' : 'Sign In'}
+                                </button>
+                            </form>
+                            
+                            <div className="mt-6 p-4 bg-blue-50 rounded-md">
+                                <h3 className="font-medium text-blue-900 mb-2">Demo Credentials:</h3>
+                                <div className="text-sm text-blue-800 space-y-1">
+                                    <div><strong>Employee:</strong> AB123456 / demo123</div>
+                                    <div><strong>Admin:</strong> CD789012 / admin123</div>
+                                    <div><strong>Approver:</strong> EF345678 / approver123</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            function Navigation({ user, onLogout, currentView, setCurrentView, notifications }) {
+                const unreadCount = notifications.filter(n => !n.read).length;
+                
+                // Role-based navigation items
+                const getNavItems = () => {
+                    const baseItems = [
+                        { id: 'dashboard', name: '📊 Dashboard', roles: ['employee', 'admin', 'approver'] }
+                    ];
+                    
+                    if (user.role === 'employee') {
+                        return [
+                            ...baseItems,
+                            { id: 'schemes', name: '📋 Browse Schemes', roles: ['employee'] },
+                            { id: 'applications', name: '📄 My Applications', roles: ['employee'] },
+                            { id: 'profile', name: '👤 My Profile', roles: ['employee'] }
+                        ];
+                    } else if (user.role === 'approver') {
+                        return [
+                            ...baseItems,
+                            { id: 'applications', name: '📋 Review Applications', roles: ['approver'] },
+                            { id: 'schemes', name: '📚 Scheme Details', roles: ['approver'] },
+                            { id: 'reports', name: '📊 Approval Reports', roles: ['approver'] }
+                        ];
+                    } else if (user.role === 'admin') {
+                        return [
+                            ...baseItems,
+                            { id: 'schemes', name: '⚙️ Manage Schemes', roles: ['admin'] },
+                            { id: 'applications', name: '📋 All Applications', roles: ['admin'] },
+                            { id: 'users', name: '👥 User Management', roles: ['admin'] },
+                            { id: 'analytics', name: '📈 Analytics', roles: ['admin'] },
+                            { id: 'reports', name: '📊 System Reports', roles: ['admin'] }
+                        ];
+                    }
+                    return baseItems;
+                };
+                
+                const navItems = getNavItems();
+                
+                return (
+                    <nav className="bg-white shadow-lg">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex justify-between h-16">
+                                <div className="flex items-center space-x-8">
+                                    <h1 className="text-xl font-bold text-gray-900">LTET Employee Trust Portal</h1>
+                                    <div className="hidden md:flex space-x-6">
+                                        {navItems.map(item => (
+                                            <NavLink 
+                                                key={item.id}
+                                                active={currentView === item.id} 
+                                                onClick={() => setCurrentView(item.id)}
+                                            >
+                                                {item.name}
+                                            </NavLink>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                    <div className="relative">
+                                        <button className="p-2 text-gray-600 hover:text-gray-900 relative">
+                                            🔔
+                                            {unreadCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                                                    {unreadCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </div>
+                                    <div className="text-sm">
+                                        <div className="font-medium text-gray-900">{user?.personalInfo?.name}</div>
+                                        <div className="text-gray-500 capitalize">{user?.role}</div>
+                                    </div>
+                                    <button
+                                        onClick={onLogout}
+                                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm"
+                                    >
+                                        Logout
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                );
+            }
+            
+            function NavLink({ children, active, onClick }) {
+                return (
+                    <button
+                        onClick={onClick}
+                        className={'px-3 py-2 text-sm font-medium rounded-md ' + (
+                            active 
+                                ? 'text-blue-600 bg-blue-50' 
+                                : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                        )}
+                    >
+                        {children}
+                    </button>
+                );
+            }
+            
+            function Dashboard({ user, schemes, applications }) {
+                const recentApplications = applications.slice(0, 3);
+                const recommendedSchemes = schemes.slice(0, 3);
+                
+                return (
+                    <div className="space-y-8">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                                Welcome back, {user?.personalInfo?.name}! 👋
+                            </h2>
+                            <p className="text-gray-600 mb-6">
+                                {user.role === 'employee' && "Manage your scheme applications and discover new benefits"}
+                                {user.role === 'approver' && "Review pending applications and manage approvals"}
+                                {user.role === 'admin' && "Monitor system performance and manage configurations"}
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <StatCard title="Total Applications" value={applications.length} icon="📄" color="blue" />
+                                <StatCard title="Approved" value={applications.filter(a => a.status === 'approved').length} icon="✅" color="green" />
+                                <StatCard title="Under Review" value={applications.filter(a => a.status === 'under_review').length} icon="⏳" color="yellow" />
+                                <StatCard title="Available Schemes" value={schemes.length} icon="📋" color="purple" />
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Applications</h3>
+                                <div className="space-y-4">
+                                    {recentApplications.map(app => (
+                                        <ApplicationCard key={app.id} application={app} />
+                                    ))}
+                                    {recentApplications.length === 0 && (
+                                        <p className="text-gray-500 text-center py-4">No applications found</p>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recommended Schemes</h3>
+                                <div className="space-y-4">
+                                    {recommendedSchemes.map(scheme => (
+                                        <SchemeCard key={scheme.id} scheme={scheme} compact />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            function StatCard({ title, value, icon, color }) {
+                const colorClasses = {
+                    blue: 'bg-blue-50 text-blue-600',
+                    green: 'bg-green-50 text-green-600',
+                    yellow: 'bg-yellow-50 text-yellow-600',
+                    purple: 'bg-purple-50 text-purple-600'
+                };
+                
+                return (
+                    <div className="bg-white p-4 rounded-lg border card-hover">
+                        <div className="flex items-center">
+                            <div className={'p-2 rounded-lg ' + (colorClasses[color] || colorClasses.blue)}>
+                                <span className="text-xl">{icon}</span>
+                            </div>
+                            <div className="ml-4">
+                                <p className="text-sm text-gray-600">{title}</p>
+                                <p className="text-2xl font-bold text-gray-900">{value}</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            function ApplicationCard({ application }) {
+                const statusColors = {
+                    approved: 'bg-green-100 text-green-800',
+                    under_review: 'bg-yellow-100 text-yellow-800',
+                    rejected: 'bg-red-100 text-red-800',
+                    submitted: 'bg-blue-100 text-blue-800'
+                };
+                
+                return (
+                    <div className="border rounded-lg p-4 hover:bg-gray-50">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <h4 className="font-medium text-gray-900">{application.schemeName}</h4>
+                                <p className="text-sm text-gray-600">₹{application.amount.toLocaleString()}</p>
+                                <p className="text-xs text-gray-500">Submitted: {application.submittedDate}</p>
+                            </div>
+                            <span className={'px-2 py-1 text-xs rounded-full ' + statusColors[application.status]}>
+                                {application.status.replace('_', ' ').toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                );
+            }
+            
+            function SchemeCard({ scheme, compact = false }) {
+                return (
+                    <div className={'bg-white rounded-lg shadow p-6 card-hover ' + (compact ? 'border' : '')}>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900">{scheme.title}</h3>
+                                <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                                    {scheme.category}
+                                </span>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-lg font-bold text-green-600">₹{scheme.maxAmount.toLocaleString()}</p>
+                                <p className="text-xs text-gray-500">Max Amount</p>
+                            </div>
+                        </div>
+                        
+                        <p className="text-gray-600 mb-4">{scheme.description}</p>
+                        
+                        {!compact && (
+                            <>
+                                <div className="mb-4">
+                                    <h4 className="font-medium text-gray-900 mb-2">Eligibility:</h4>
+                                    <ul className="text-sm text-gray-600 space-y-1">
+                                        {scheme.eligibility.map((item, index) => (
+                                            <li key={index}>• {item}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                
+                                <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
+                                    <span>📊 {scheme.applicationCount} applications</span>
+                                    <span>✅ {scheme.approvalRate}% approval rate</span>
+                                </div>
+                            </>
+                        )}
+                        
+                        <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700">
+                            Apply Now
+                        </button>
+                    </div>
+                );
+            }
+            
+            function SchemesPage({ schemes, user }) {
+                const [filter, setFilter] = useState('all');
+                
+                const filteredSchemes = filter === 'all' 
+                    ? schemes 
+                    : schemes.filter(s => s.category.toLowerCase() === filter);
+                
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Available Schemes</h2>
+                            <div className="flex space-x-4">
+                                <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>
+                                    All Schemes
+                                </FilterButton>
+                                <FilterButton active={filter === 'medical'} onClick={() => setFilter('medical')}>
+                                    Medical
+                                </FilterButton>
+                                <FilterButton active={filter === 'education'} onClick={() => setFilter('education')}>
+                                    Education
+                                </FilterButton>
+                                <FilterButton active={filter === 'skill building'} onClick={() => setFilter('skill building')}>
+                                    Skill Building
+                                </FilterButton>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {filteredSchemes.map(scheme => (
+                                <SchemeCard key={scheme.id} scheme={scheme} />
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+            
+            function FilterButton({ children, active, onClick }) {
+                return (
+                    <button
+                        onClick={onClick}
+                        className={'px-4 py-2 rounded-md text-sm font-medium ' + (
+                            active 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        )}
+                    >
+                        {children}
+                    </button>
+                );
+            }
+            
+            function ApplicationsPage({ applications, user }) {
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                                {user.role === 'approver' ? 'Applications for Review' : 
+                                 user.role === 'admin' ? 'All Applications' : 'My Applications'}
+                            </h2>
+                            <p className="text-gray-600">
+                                {user.role === 'approver' ? 'Review and approve pending applications' : 
+                                 user.role === 'admin' ? 'Monitor all system applications' : 'Track the status of your scheme applications'}
+                            </p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            {applications.map(application => (
+                                <div key={application.id} className="bg-white rounded-lg shadow p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-gray-900">{application.schemeName}</h3>
+                                            <p className="text-gray-600">Application ID: {application.id}</p>
+                                            {user.role !== 'employee' && (
+                                                <p className="text-gray-600">Applicant: {application.applicantName}</p>
+                                            )}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-lg font-bold text-gray-900">₹{application.amount.toLocaleString()}</p>
+                                            <span className={'px-3 py-1 text-sm rounded-full ' + (
+                                                application.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                application.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                                                application.status === 'needs_clarification' ? 'bg-orange-100 text-orange-800' :
+                                                'bg-blue-100 text-blue-800'
+                                            )}>
+                                                {application.status.replace('_', ' ').toUpperCase()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    {application.timeline && (
+                                        <div className="border-t pt-4">
+                                            <h4 className="font-medium text-gray-900 mb-2">Timeline:</h4>
+                                            <div className="space-y-2">
+                                                {application.timeline.map((event, index) => (
+                                                    <div key={index} className="flex items-center space-x-3">
+                                                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                                        <div>
+                                                            <span className="text-sm font-medium text-gray-900">
+                                                                {event.status.replace('_', ' ').toUpperCase()}
+                                                            </span>
+                                                            <span className="text-sm text-gray-500 ml-2">{event.date}</span>
+                                                            <p className="text-sm text-gray-600">{event.comment}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+            
+            function ProfilePage({ user }) {
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">My Profile</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-sm text-gray-600">Name</label>
+                                            <p className="font-medium">{user.personalInfo.name}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm text-gray-600">Employee ID</label>
+                                            <p className="font-medium">{user.employeeId}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm text-gray-600">Email</label>
+                                            <p className="font-medium">{user.personalInfo.email}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm text-gray-600">Department</label>
+                                            <p className="font-medium">{user.personalInfo.department}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            function UserManagementPage() {
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">User Management</h2>
+                            <p className="text-gray-600">Manage user roles and permissions</p>
+                            <div className="mt-4 text-center text-gray-500">
+                                <p>👥 User management interface coming soon...</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            function ReportsPage({ user }) {
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                                {user.role === 'admin' ? 'System Reports' : 'Approval Reports'}
+                            </h2>
+                            <p className="text-gray-600">
+                                {user.role === 'admin' 
+                                    ? 'Generate comprehensive system reports' 
+                                    : 'View approval statistics and reports'
+                                }
+                            </p>
+                            <div className="mt-4 text-center text-gray-500">
+                                <p>📊 Advanced reporting interface coming soon...</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            function AdminDashboard() {
+                const [analytics, setAnalytics] = useState(null);
+                
+                useEffect(() => {
+                    fetch('/api/admin/analytics')
+                        .then(res => res.json())
+                        .then(data => setAnalytics(data.analytics));
+                }, []);
+                
+                if (!analytics) return <div>Loading...</div>;
+                
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-lg shadow p-6">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Analytics Dashboard</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                <StatCard title="Total Applications" value={analytics.totalApplications} icon="📊" color="blue" />
+                                <StatCard title="Pending Review" value={analytics.pendingReview} icon="⏳" color="yellow" />
+                                <StatCard title="Approved This Month" value={analytics.approvedThisMonth} icon="✅" color="green" />
+                                <StatCard title="Total Disbursed" value={'₹' + (analytics.totalDisbursed / 1000000).toFixed(1) + 'M'} icon="💰" color="purple" />
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Scheme Utilization</h3>
+                                <div className="space-y-4">
+                                    {analytics.schemeUtilization.map((scheme, index) => (
+                                        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                            <div>
+                                                <p className="font-medium text-gray-900">{scheme.scheme}</p>
+                                                <p className="text-sm text-gray-600">{scheme.applications} applications</p>
+                                            </div>
+                                            <p className="font-bold text-gray-900">₹{(scheme.amount / 1000000).toFixed(1)}M</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white rounded-lg shadow p-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Monthly Trends</h3>
+                                <div className="space-y-4">
+                                    {analytics.monthlyTrends.map((month, index) => (
+                                        <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                            <div>
+                                                <p className="font-medium text-gray-900">{month.month} 2024</p>
+                                                <p className="text-sm text-gray-600">{month.applications} applications</p>
+                                            </div>
+                                            <p className="font-bold text-gray-900">₹{(month.amount / 1000000).toFixed(1)}M</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+            
+            // Render the application
+            ReactDOM.render(<App />, document.getElementById('root'));
+        </script>
+    </body>
+    </html>
+  `);
 });
 
 app.listen(PORT, () => {
